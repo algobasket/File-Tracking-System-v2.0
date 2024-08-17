@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 09, 2024 at 07:58 AM
+-- Generation Time: Aug 17, 2024 at 07:59 PM
 -- Server version: 10.4.24-MariaDB
 -- PHP Version: 8.1.6
 
@@ -287,7 +287,10 @@ INSERT INTO `django_migrations` (`id`, `app`, `name`, `applied`) VALUES
 (30, 'fts_app', '0012_noting_notingusermap', '2024-08-08 00:07:02.750487'),
 (31, 'fts_app', '0013_noting_comment_noting_digital_signature', '2024-08-08 00:38:20.016834'),
 (32, 'fts_app', '0014_noting_selected_user', '2024-08-08 01:36:53.404850'),
-(33, 'fts_app', '0015_notingusermap_digital_signature', '2024-08-08 22:23:13.501064');
+(33, 'fts_app', '0015_notingusermap_digital_signature', '2024-08-08 22:23:13.501064'),
+(34, 'fts_app', '0016_notingusermap_signature_image', '2024-08-13 05:11:47.897353'),
+(35, 'fts_app', '0017_noting_signature_image', '2024-08-13 05:47:34.903780'),
+(36, 'fts_app', '0018_alter_noting_filename_dak_doc', '2024-08-13 08:15:34.211208');
 
 -- --------------------------------------------------------
 
@@ -306,7 +309,8 @@ CREATE TABLE `django_session` (
 --
 
 INSERT INTO `django_session` (`session_key`, `session_data`, `expire_date`) VALUES
-('38vjjqh6t88avt9ni1rcee57598no3pd', 'e30:1scIbI:6Xohq9SVT-S8kdRCXgpTNhMT1xyHhkK1WWUYizB5KLQ', '2024-08-23 05:55:44.076386'),
+('1mdxsvjqj58qa3qq5f3717fxiwz8dz5g', '.eJyrViotTi2Kz0xRsjI10AFz8hJzU5WslBxTcjPzlHSUivJzUsHyhhA2UCoRKpWRn5saX1qUAxRKSSzOSMpPLErRhUjWAgAZKR2H:1sdwQ8:pDsE59OUl8U0COLn17A6YtXK26EFfQtHHOOssO4yct0', '2024-08-27 18:39:00.070064'),
+('38vjjqh6t88avt9ni1rcee57598no3pd', '.eJyrViotTi2Kz0xRsjI11gFz8hJzU5WslDzyiw2NjJV0lIryc1LBCkwgbKBcRn4xUCIjPzc1vrQoByiQklickZSfWJSim5JakFhUkpuaV6JUCwB2ih7Q:1sfNSm:4BLOOsTbxtZz_lDeVdovtG1rzVv03sQ4QTHp90NqDl8', '2024-08-31 17:43:40.401087'),
 ('4a6znlk10aj0ysdcpkk021bm6esjeie2', '.eJyrViotTi2Kz0xRsjI10AFz8hJzU5WslBJTcjPzlHSUivJzUsHyhhA2klRGfm5qfGlRDlAoJbE4Iyk_sShFFyJZCwAhCR2n:1sFllk:9RY1Y5x0aK3pd7cxCfk0eIo1cAmc6cVPGq1u1bVSk7E', '2024-06-22 02:25:24.888135'),
 ('9nyffdci65akoejyd65kht3zcnby8zjv', '.eJyrViotTi2Kz0xRsjLWAbPzEnNTlayU0nOLlXSUivJzUsGSRhA2XCIjPzc1vrQoByiQklickZSfWJSiC5KqBQBbuhsw:1sAXfR:Y9_yK0lvBElRKaC5oKFZ7RuV8tnjBSoWW7Lrg1BeWV0', '2024-06-07 16:21:17.782901'),
 ('c6o0dkb53fvhbspms63ej9k7edzsucms', '.eJyrViotTi2Kz0xRsjLWAbPzEnNTlayU0nOLlXSUivJzUsGSRhA2VKIWAP2qEcs:1s5BOE:7opskUeh6Yl_1GDUNEmpzeRkF2E0fxD3TXs_v3WfSO8', '2024-05-23 21:33:22.829224'),
@@ -447,7 +451,7 @@ CREATE TABLE `fts_app_noting` (
   `noting_no` varchar(255) NOT NULL,
   `title` varchar(255) NOT NULL,
   `filename_doc` varchar(255) NOT NULL,
-  `filename_dak_doc` varchar(255) NOT NULL,
+  `filename_dak_doc` varchar(255) DEFAULT NULL,
   `created` datetime(6) NOT NULL,
   `updated` datetime(6) NOT NULL,
   `status` smallint(5) UNSIGNED NOT NULL CHECK (`status` >= 0),
@@ -455,8 +459,17 @@ CREATE TABLE `fts_app_noting` (
   `user_id` bigint(20) NOT NULL,
   `comment` longtext DEFAULT NULL,
   `digital_signature` longtext DEFAULT NULL,
-  `selected_user_id` bigint(20) NOT NULL
+  `selected_user_id` bigint(20) NOT NULL,
+  `signature_image` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `fts_app_noting`
+--
+
+INSERT INTO `fts_app_noting` (`id`, `noting_no`, `title`, `filename_doc`, `filename_dak_doc`, `created`, `updated`, `status`, `role_id`, `user_id`, `comment`, `digital_signature`, `selected_user_id`, `signature_image`) VALUES
+(11, 'N-217235', 'Demo Noting 1', '20240813143526.jpg', NULL, '2024-08-13 14:35:26.364096', '2024-08-13 14:35:26.364096', 1, 6, 53, NULL, 'HOS Signature', 55, NULL),
+(12, 'N-587523', 'Demo Noting 2', '20240813143628.jpg', NULL, '2024-08-13 14:36:28.280211', '2024-08-13 14:36:28.280211', 1, 8, 53, NULL, 'HOS Signature', 57, '20240813143628_signature.png');
 
 -- --------------------------------------------------------
 
@@ -475,8 +488,19 @@ CREATE TABLE `fts_app_notingusermap` (
   `from_user_id` bigint(20) NOT NULL,
   `noting_id` bigint(20) NOT NULL,
   `to_user_id` bigint(20) NOT NULL,
-  `digital_signature` longtext DEFAULT NULL
+  `digital_signature` longtext DEFAULT NULL,
+  `signature_image` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `fts_app_notingusermap`
+--
+
+INSERT INTO `fts_app_notingusermap` (`id`, `created`, `updated`, `status`, `is_opened`, `is_forwarded`, `message`, `from_user_id`, `noting_id`, `to_user_id`, `digital_signature`, `signature_image`) VALUES
+(15, '2024-08-13 14:35:26.365587', '2024-08-13 14:35:26.365587', 1, 1, 1, NULL, 53, 11, 55, 'HOS  Signature', NULL),
+(16, '2024-08-13 14:36:28.281210', '2024-08-13 14:36:28.281210', 1, 0, 0, NULL, 53, 12, 57, 'HOS Signature', '20240813143628_signature.png'),
+(17, '2024-08-13 14:40:03.652168', '2024-08-13 14:40:03.652168', 1, 0, 0, 'CO Comment', 55, 11, 55, 'CO Signature', NULL),
+(18, '2024-08-13 14:53:49.065604', '2024-08-13 14:53:49.065604', 1, 0, 0, 'CO Comments', 55, 11, 56, 'Co Signature', NULL);
 
 -- --------------------------------------------------------
 
@@ -566,14 +590,14 @@ CREATE TABLE `fts_app_user` (
 --
 
 INSERT INTO `fts_app_user` (`id`, `username`, `email`, `password`, `created`, `updated`, `status`) VALUES
-(50, 'admin', 'admin@oefhz.com', 'pbkdf2_sha256$600000$NWGYCRBP35J8szo27kZP46$4p1lNwO27YRmk5j79BLgu180DYYOa9h4Z1wClNVqRDg=', '2024-06-05 00:26:06.981712', '2024-06-05 00:26:06.982709', 1),
-(51, 'gms', 'gms@oefhz.com', 'pbkdf2_sha256$600000$lBCszB4hz8FQ6IWi4SWz1R$YeyNCxsVaRFS6GHUqdH8s0AjMAIdM/lx/F/l6V11d5c=', '2024-06-05 00:26:07.152011', '2024-06-05 00:26:07.152011', 1),
-(52, 'dakghar', 'dakghar@oefhz.com', 'pbkdf2_sha256$600000$o3w0s1HFJr3bq38T0dOi5o$cCyVe2ppsQ6WedAmi67Po2Jn5JQSzsgDr2cQaG7tnh8=', '2024-06-05 00:26:07.321139', '2024-06-05 00:26:07.321139', 1),
-(53, 'hos', 'hos@oefhz.com', 'pbkdf2_sha256$600000$iSn4ZcZ6MRmL8emsqHdi3D$CfI9fJlXl9eLi0olCL0+gdF1rIso5CWXhdhpbVbTMUI=', '2024-06-05 00:26:07.491629', '2024-06-05 00:26:07.491629', 1),
-(54, 'go', 'go@oefhz.com', 'pbkdf2_sha256$600000$G3NmCcsR9EaqjcAr5ftbAU$IQNIi3+/nxOHI5vSo7jvyIyngPqpEVqfUHgkUFWsQ54=', '2024-06-05 00:26:07.659087', '2024-06-07 23:12:17.547869', 1),
-(55, 'co', 'co@oefhz.com', 'pbkdf2_sha256$600000$9Xsdx9X0xsraw0WwnsSby2$m1JvUJgAcgKYM6GXbvfVViGGwT5Uiafe8pmJypbBvMQ=', '2024-06-05 00:26:07.828628', '2024-06-07 23:11:34.979231', 1),
-(56, 'do', 'do@oefhz.com', 'pbkdf2_sha256$600000$hkD4ps9xPH8yF3Ld7s7Vmf$TyQmHShoAJ8jqtzd/UUAHoQohQU5ZEZfquyCU2Admis=', '2024-06-05 00:26:08.000616', '2024-06-05 00:26:08.000616', 1),
-(57, 'gm', 'gm@oefhz.com', 'pbkdf2_sha256$600000$8d5rIToaB3BaRmp5HHcHUC$wMMnxfr1i4xPIs1ozm6C67jB9gQD+5ydG+zPatNoWZ0=', '2024-06-05 00:26:08.169568', '2024-06-05 00:26:08.169568', 1);
+(50, 'Admin', 'admin@oefhz.com', 'pbkdf2_sha256$600000$NWGYCRBP35J8szo27kZP46$4p1lNwO27YRmk5j79BLgu180DYYOa9h4Z1wClNVqRDg=', '2024-06-05 00:26:06.981712', '2024-06-05 00:26:06.982709', 1),
+(51, 'Gms123', 'gms@oefhz.com', 'pbkdf2_sha256$600000$lBCszB4hz8FQ6IWi4SWz1R$YeyNCxsVaRFS6GHUqdH8s0AjMAIdM/lx/F/l6V11d5c=', '2024-06-05 00:26:07.152011', '2024-06-05 00:26:07.152011', 1),
+(52, 'Dakghar123', 'dakghar@oefhz.com', 'pbkdf2_sha256$600000$o3w0s1HFJr3bq38T0dOi5o$cCyVe2ppsQ6WedAmi67Po2Jn5JQSzsgDr2cQaG7tnh8=', '2024-06-05 00:26:07.321139', '2024-06-05 00:26:07.321139', 1),
+(53, 'Hos123', 'hos@oefhz.com', 'pbkdf2_sha256$600000$iSn4ZcZ6MRmL8emsqHdi3D$CfI9fJlXl9eLi0olCL0+gdF1rIso5CWXhdhpbVbTMUI=', '2024-06-05 00:26:07.491629', '2024-06-05 00:26:07.491629', 1),
+(54, 'Go123', 'go@oefhz.com', 'pbkdf2_sha256$600000$G3NmCcsR9EaqjcAr5ftbAU$IQNIi3+/nxOHI5vSo7jvyIyngPqpEVqfUHgkUFWsQ54=', '2024-06-05 00:26:07.659087', '2024-06-07 23:12:17.547869', 1),
+(55, 'Co123', 'co@oefhz.com', 'pbkdf2_sha256$600000$9Xsdx9X0xsraw0WwnsSby2$m1JvUJgAcgKYM6GXbvfVViGGwT5Uiafe8pmJypbBvMQ=', '2024-06-05 00:26:07.828628', '2024-06-07 23:11:34.979231', 1),
+(56, 'Do123', 'do@oefhz.com', 'pbkdf2_sha256$600000$hkD4ps9xPH8yF3Ld7s7Vmf$TyQmHShoAJ8jqtzd/UUAHoQohQU5ZEZfquyCU2Admis=', '2024-06-05 00:26:08.000616', '2024-06-05 00:26:08.000616', 1),
+(57, 'Gm123', 'gm@oefhz.com', 'pbkdf2_sha256$600000$8d5rIToaB3BaRmp5HHcHUC$wMMnxfr1i4xPIs1ozm6C67jB9gQD+5ydG+zPatNoWZ0=', '2024-06-05 00:26:08.169568', '2024-06-05 00:26:08.169568', 1);
 
 -- --------------------------------------------------------
 
@@ -870,7 +894,7 @@ ALTER TABLE `django_content_type`
 -- AUTO_INCREMENT for table `django_migrations`
 --
 ALTER TABLE `django_migrations`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `fts_app_correspondence`
@@ -906,13 +930,13 @@ ALTER TABLE `fts_app_message`
 -- AUTO_INCREMENT for table `fts_app_noting`
 --
 ALTER TABLE `fts_app_noting`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `fts_app_notingusermap`
 --
 ALTER TABLE `fts_app_notingusermap`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `fts_app_role`

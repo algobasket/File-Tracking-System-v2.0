@@ -51,7 +51,7 @@
                                             <a href="{% url 'create-noting' %}" name="create_noting" class="btn btn-outline-dark fw-bold">CREATE NOTING NOW</a>   
                                            </div>
                                            <div class="row mb-3">
-                                            <a href="{% url 'list-notings' %}" name="list_notings" class="btn btn-outline-dark fw-bold">MY CREATED NOTINGS</a>   
+                                            <a href="{% url 'list-notings' %}" name="list_notings" class="btn btn-outline-dark fw-bold">MY CREATED NOTINGS ({{ receive_forwarded_count.created_noting_count }})</a>   
                                            </div>
                                            {% endif %}
 
@@ -59,10 +59,10 @@
                                             <a href="{% url 'search-noting' %}" name="search_noting" class="btn btn-outline-dark fw-bold">SEARCH NOTING</a>  
                                            </div>  
                                            <div class="row mb-3">
-                                            <a href="{% url 'incoming-noting' %}" name="incoming_noting" class="btn btn-outline-dark fw-bold">INCOMING NOTING</a>  
+                                            <a href="{% url 'incoming-noting' %}" name="incoming_noting" class="btn btn-outline-dark fw-bold">INCOMING NOTING ({{ receive_forwarded_count.received_noting_count }})</a>  
                                            </div>
                                            <div class="row mb-3">
-                                            <a href="{% url 'forwarded-noting' %}" name="forwarded_noting" class="btn btn-outline-dark fw-bold">FORWARDED NOTING</a>  
+                                            <a href="{% url 'forwarded-noting' %}" name="forwarded_noting" class="btn btn-outline-dark fw-bold">FORWARDED NOTING ({{ receive_forwarded_count.forwarded_noting_count }})</a>  
                                            </div>
                                            
                                       </div>
@@ -420,7 +420,7 @@
         </div>
       </div>
 
-     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+     <script src="{% static 'js/jquery.min.js' %}"></script>
      <script src="{% static 'js/script.js' %}"></script>   
      <script src="{% static 'bootstrap5/bootstrap.bundle.min.js' %}"></script>
    

@@ -8,7 +8,10 @@ from ..decorators import check_session_exists
 from django.db.models import F 
 import os
 
-@check_session_exists 
+ 
+
+
+@check_session_exists  
 def list_department(request):
   departments = Department.objects.select_related('created_user').all()
 
@@ -33,6 +36,9 @@ def create_department(request):
 
 
 
+
+
+
 @check_session_exists 
 def update_department(request,department_id):
     department = Department.objects.get(id=department_id)
@@ -47,6 +53,9 @@ def update_department(request,department_id):
     
     data = {'section' : 'update_department','department' : department}
     return render(request,'admin/department.html',data) 
+
+
+
 
 
 
@@ -66,6 +75,9 @@ def list_sub_department(request):
   sub_department = SubDepartment.objects.select_related('created_user','department_id').all() 
   data = {'section' : 'list_sub_department', 'sub_department' : sub_department}
   return render(request,'admin/department.html',data) 
+
+
+
 
 
 
@@ -153,6 +165,10 @@ def delete_sub_department(request,sub_department_id):
   return redirect('admin-list-sub-department')
 
 
+
+
+
+
 @check_session_exists
 def search_noting(request): 
     uid = request.session.get('user_id')
@@ -163,13 +179,15 @@ def search_noting(request):
                 .filter(noting__noting_no=search_by_noting_no) \
                 .select_related('noting', 'from_user', 'to_user') \
                 .values(
-                    'id', 'is_opened', 'message', 'is_forwarded', 'status',
+                    'id', 'is_opened', 'message', 'is_forwarded', 'status', 'created', 'updated',
                     'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
-                    'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title', 
-                    'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
+                    'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title',
+                    'noting__user_id', 'noting__selected_user_id', 'noting__role_id', 
                     from_user_name=F('from_user__username'),
-                    to_user_name=F('to_user__username')
-                )
+                    from_user_role_name=F('from_user__user_role_maps__role__role_name'),  # Get the role name of from_user
+                    to_user_name=F('to_user__username'),
+                    to_user_role_name=F('to_user__user_role_maps__role__role_name')  # Get the role name of to_user
+                ).order_by('-id')   
         else:
             notings = NotingUserMap.objects.none()  # Return empty queryset for NotingUserMap
     else:
@@ -179,88 +197,116 @@ def search_noting(request):
     return render(request, 'admin/noting.html', data) 
 
 
+
+
+
+
+
 @check_session_exists
 def monitoring_noting(request):
-    notings = Noting.objects.filter().order_by('-pk')
-
-    for noting in notings:
-        # Initialize the array for users
-        users_array = []
-        noting_detail_array = []
-
-        notings_map = NotingUserMap.objects \
-            .filter(noting_id=noting.id, from_user_id=noting.user_id) \
+    notings_map = NotingUserMap.objects \
+            .filter() \
             .select_related('noting', 'from_user', 'to_user') \
             .values(
-                'id', 'is_opened', 'message', 'is_forwarded', 'status',
+                'id', 'is_opened', 'message', 'is_forwarded', 'status', 'created', 'updated',
+                'digital_signature', 'signature_image',
                 'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
                 'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title',
                 'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
                 from_user_name=F('from_user__username'),
-                to_user_name=F('to_user__username')
-            )
-
-        # Collect the usernames
-        for map_item in notings_map:
-            users_array.append(map_item['to_user_name'])
-            noting_detail_array.append(map_item)
-
-        # Attach the users array to each noting object (as an attribute, not in the database)
-        noting.users = users_array
-        noting.noting_map_detail = noting_detail_array 
+                from_user_role_name=F('from_user__user_role_maps__role__role_name'),
+                to_user_name=F('to_user__username'),
+                to_user_role_name=F('to_user__user_role_maps__role__role_name')
+            ).order_by('-id') 
 
     noting_counts = get_noting_counts()  # Assuming this function is defined elsewhere
     data = {
         'section': "monitoring_noting",
-        'notings': notings,
-        'noting_counts': noting_counts
+        'notings_map': notings_map,
+        'noting_counts': noting_counts 
     }
     return render(request, 'admin/noting.html', data)
+
 
 
 
 
 
 def search_noting_view(request, noting_id):
+    notings = Noting.objects.filter(id=noting_id)
     uid = request.session.get('user_id')
-    if noting_id:
-        # Query the Noting object
-        noting = Noting.objects.get(id=noting_id)
+    
+    # Prepare the data with file extensions
+    notings_with_extension = []
+    for noting in notings:
+        # Extract extension for filename_doc
+        file_doc_extension = os.path.splitext(noting.filename_doc)[1][1:]
+        
+        # Extract extension for filename_dak_doc if it exists
+        file_dak_doc_extension = os.path.splitext(noting.filename_dak_doc)[1][1:] if noting.filename_dak_doc else None
 
-        # Query the NotingUserMap related objects
+        # Get the NotingUserMap data
         notings_map = NotingUserMap.objects \
-            .filter(noting_id=noting_id) \
+            .filter(noting_id=noting_id, from_user_id=noting.user_id) \
             .select_related('noting', 'from_user', 'to_user') \
             .values(
-                'id', 'is_opened', 'message', 'is_forwarded', 'status', 'digital_signature',
+                'id', 'is_opened', 'message', 'is_forwarded', 'status', 'created', 'updated',
+                'digital_signature', 'signature_image',
                 'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
                 'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title',
                 'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
                 from_user_name=F('from_user__username'),
-                to_user_name=F('to_user__username')
-            )
+                from_user_role_name=F('from_user__user_role_maps__role__role_name'),
+                to_user_name=F('to_user__username'),
+                to_user_role_name=F('to_user__user_role_maps__role__role_name')
+            ).order_by('-id')
 
-        # Extract file extensions
-        file_doc_extension = os.path.splitext(noting.filename_doc)[1][1:] if noting.filename_doc else ""
-        file_dak_doc_extension = os.path.splitext(noting.filename_dak_doc)[1][1:] if noting.filename_dak_doc else ""
-
-        noting_with_extension = {
+        notings_with_extension.append({
             'noting': noting,
+            'notings_map': list(notings_map),  # Converting to list for easy iteration in template
             'file_doc_extension': file_doc_extension,
             'file_dak_doc_extension': file_dak_doc_extension,
-        }
-    else:
-        noting_with_extension = None
-        notings_map = []
+        })
+
+    notings_map2 = NotingUserMap.objects \
+            .filter(noting_id=noting_id) \
+            .select_related('noting', 'from_user', 'to_user') \
+            .values(
+                'id', 'is_opened', 'message', 'is_forwarded', 'status', 'created', 'updated',
+                'digital_signature', 'signature_image',
+                'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
+                'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title',
+                'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
+                from_user_name=F('from_user__username'),
+                from_user_role_name=F('from_user__user_role_maps__role__role_name'),
+                to_user_name=F('to_user__username'),
+                to_user_role_name=F('to_user__user_role_maps__role__role_name')
+            ).order_by('-id')    
     
-  
+    receive_forwarded_count = get_receive_forwarded_count(uid)
+    noting_counts = get_noting_counts()
     data = {
         'section': "search_noting_view", 
-        'noting_with_extension': noting_with_extension, 
-        'notings_map': notings_map,
-    }
+        'notings_map2' : notings_map2,
+        'notings_with_extension': notings_with_extension,
+        'receive_forwarded_count': receive_forwarded_count,
+        'noting_counts': noting_counts 
+    } 
 
     return render(request, 'admin/noting.html', data)
+
+
+def get_receive_forwarded_count(uid):   
+    received_noting_count  = NotingUserMap.objects.filter(to_user_id = uid).count()
+    forwarded_noting_count = NotingUserMap.objects.filter(from_user_id = uid).count()
+    created_noting_count   = Noting.objects.filter(user_id = uid).count()  
+    corr_count = {
+                   'received_noting_count' : received_noting_count,
+                   'forwarded_noting_count':forwarded_noting_count,
+                   'created_noting_count' : created_noting_count
+                } 
+    return corr_count 
+
 
 
 
@@ -332,11 +378,20 @@ def view_noting_map(request, noting_user_map_id):
 
 
 
-def update_noting_open_value(uid,noting_user_map_id): 
+
+
+def update_noting_open_value(uid,noting_user_map_id):  
     NotingUserMap.objects.filter(id=noting_user_map_id).exclude(from_user_id=uid).update(is_opened=1)
+
+
+ 
+
 
 def update_noting_forward_value(noting_user_map_id):     
     NotingUserMap.objects.filter(id=noting_user_map_id).update(is_forwarded=1) 
+
+
+
 
 
 def get_noting_counts():   

@@ -8,10 +8,11 @@ from django.contrib import messages
 import os
 from .helpers.common_helper import download_file
 from .decorators import check_session_exists 
-from django.db.models import F  
+from django.db.models import F,Subquery, OuterRef  
 from django.conf import settings
 import random
-
+from django.core.files.base import ContentFile
+import base64
 
 
 @check_session_exists
@@ -19,10 +20,10 @@ def index(request):
    return HttpResponse("Hello")
     
 
+ 
 
 
-
-@check_session_exists
+@check_session_exists 
 def dakghar(request): 
     if request.method == 'POST':
         ALLOWED_EXTENSIONS = ['pdf', 'doc', 'docx', 'png', 'jpg']
@@ -151,8 +152,11 @@ def dakghar_delete_document(request, doc_id):
 
 
 @check_session_exists
-def manager(request): 
-    return render(request,'dashboard-gm.html');
+def manager(request):
+    uid = request.session.get('user_id')
+    receive_forwarded_count = get_receive_forwarded_count(uid)
+    data = {"receive_forwarded_count" : receive_forwarded_count}
+    return render(request,'dashboard-gm.html',data);
   
    
 
@@ -189,9 +193,13 @@ def dashboard_department(request):
 
     received_corr_count = CorrespondenceUserMap.objects.filter(to_user_id = uid).count()
     forwarded_corr_count = CorrespondenceUserMap.objects.filter(from_user_id = uid).count()
+
     corr_count = {'received_corr_count' : received_corr_count,'forwarded_corr_count':forwarded_corr_count}
-    data = {'section': "dashboard_department",'corr_count':corr_count}
-    return render(request,'dashboard-department.html',data);
+    receive_forwarded_count = get_receive_forwarded_count(uid)
+    data = {'section': "dashboard_department",'corr_count':corr_count,'receive_forwarded_count' : receive_forwarded_count} 
+    return render(request,'dashboard-department.html',data); 
+
+
 
 
 
@@ -243,6 +251,8 @@ def incoming_correspondence_department(request):
 
 
 
+
+
 @check_session_exists
 def outgoing_correspondence_department(request): 
     uid = request.session.get('user_id')
@@ -280,9 +290,13 @@ def outgoing_correspondence_department(request):
 
 
 
+
+
 @check_session_exists
 def download_document(request,file_name):
    return download_file("20240510130830.pdf")
+
+
 
 
 
@@ -321,6 +335,10 @@ def dashboard_account(request):
     return render(request, 'dashboard-account.html', data) 
 
 
+
+
+
+
 def generate_unique_noting_number(): 
     digit_length = 6  
     max_retries = 10000  
@@ -335,85 +353,186 @@ def generate_unique_noting_number():
 
 
 
+
+
+
 @check_session_exists
+# def create_noting(request):
+#     uid = request.session.get('user_id')
+#     noting_rand_no = generate_unique_noting_number()
+#     if request.method == 'POST':
+#         ALLOWED_EXTENSIONS = ['pdf', 'docx', 'png', 'jpg'] 
+#         upload_file_doc = request.FILES.get('uploadfile_doc')
+#         upload_file_dak_doc = request.FILES.get('uploadfile_dak_doc') 
+
+#         # Ensure both files are uploaded
+#         if not upload_file_doc or not upload_file_dak_doc:
+#             messages.error(request, 'Please select both document and dak document files to upload.')
+#             return redirect('create-noting')
+
+#         # Get the file extensions
+#         file_extension_doc = upload_file_doc.name.split('.')[-1].lower()
+#         file_extension_dak_doc = upload_file_dak_doc.name.split('.')[-1].lower()
+
+#         # Check if the file extensions are allowed
+#         if file_extension_doc not in ALLOWED_EXTENSIONS or file_extension_dak_doc not in ALLOWED_EXTENSIONS:
+#             error_message = 'Unknown file format. Only PDF, DOC, DOCX, PNG, and JPG files are allowed.'
+#             messages.error(request, error_message)
+#             return redirect('create-noting')
+
+#         try:
+#             # Generate filenames
+#             timestamp = timezone.now().strftime('%Y%m%d%H%M%S') 
+#             filename_doc = f"{timestamp}.{file_extension_doc}" 
+#             filename_dak_doc = f"{timestamp}.{file_extension_dak_doc}"  
+
+#             # Save the files
+#             fs = FileSystemStorage()
+#             filename1 = fs.save(filename_doc, upload_file_doc) 
+#             filename2 = fs.save(filename_dak_doc, upload_file_dak_doc)
+
+#             # Get form data
+#             noting_title = request.POST.get('noting_title')
+#             noting_no = request.POST.get('noting_number') 
+#             noting_comments = request.POST.get('noting_comments')
+#             selected_role = request.POST.get('selected_role') 
+#             selected_user = request.POST.get('selected-roles-users')
+#             digital_signature = request.POST.get('noting_digital_signature')
+
+#             # Create a Noting object
+#             noting = Noting.objects.create(
+#                 title=noting_title, 
+#                 filename_doc=filename1,
+#                 filename_dak_doc=filename2,
+#                 noting_no=noting_no, 
+#                 user_id=uid,
+#                 role_id=selected_role,
+#                 selected_user_id=selected_user,
+#                 digital_signature=digital_signature
+#             )
+
+#             # Create a NotingUserMap object
+#             NotingUserMap.objects.create(
+#                 noting=noting,
+#                 from_user_id=uid,
+#                 to_user_id=selected_user,
+#                 is_opened=0,
+#                 is_forwarded=0,
+#                 message=noting_comments
+#             )
+
+#             # Redirect to a success page or perform any additional actions
+#             return redirect('list-notings')
+
+#         except ValidationError:
+#             # Handle validation errors
+#             messages.error(request, 'Error occurred while uploading the file.') 
+#             return redirect('create-noting') 
+
+#     roles = Role.objects.filter(role_name__in=['co', 'go', 'do', 'hos','gm'])
+#     data = {'section': "create_noting", 'roles': roles,'noting_rand_no':noting_rand_no}
+#     return render(request, 'noting.html', data)  
+
 def create_noting(request):
     uid = request.session.get('user_id')
     noting_rand_no = generate_unique_noting_number()
-    if request.method == 'POST':
-        ALLOWED_EXTENSIONS = ['pdf', 'docx', 'png', 'jpg'] 
-        upload_file_doc = request.FILES.get('uploadfile_doc')
-        upload_file_dak_doc = request.FILES.get('uploadfile_dak_doc') 
 
-        # Ensure both files are uploaded
-        if not upload_file_doc or not upload_file_dak_doc:
-            messages.error(request, 'Please select both document and dak document files to upload.')
+    if request.method == 'POST':
+        ALLOWED_EXTENSIONS = ['pdf', 'docx', 'png', 'jpg']
+        upload_file_doc = request.FILES.get('uploadfile_doc')
+        upload_file_dak_doc = request.FILES.get('uploadfile_dak_doc')
+
+        # Ensure document file is uploaded
+        if not upload_file_doc:
+            messages.error(request, 'Please select a document file to upload.')
             return redirect('create-noting')
 
-        # Get the file extensions
+        # Check file extensions
         file_extension_doc = upload_file_doc.name.split('.')[-1].lower()
-        file_extension_dak_doc = upload_file_dak_doc.name.split('.')[-1].lower()
+        file_extension_dak_doc = upload_file_dak_doc.name.split('.')[-1].lower() if upload_file_dak_doc else None
 
-        # Check if the file extensions are allowed
-        if file_extension_doc not in ALLOWED_EXTENSIONS or file_extension_dak_doc not in ALLOWED_EXTENSIONS:
-            error_message = 'Unknown file format. Only PDF, DOC, DOCX, PNG, and JPG files are allowed.'
+        if file_extension_doc not in ALLOWED_EXTENSIONS or (upload_file_dak_doc and file_extension_dak_doc not in ALLOWED_EXTENSIONS):
+            error_message = 'Unknown file format. Only PDF, DOCX, PNG, and JPG files are allowed.'
             messages.error(request, error_message)
             return redirect('create-noting')
 
         try:
             # Generate filenames
-            timestamp = timezone.now().strftime('%Y%m%d%H%M%S') 
-            filename_doc = f"{timestamp}.{file_extension_doc}" 
-            filename_dak_doc = f"{timestamp}.{file_extension_dak_doc}"  
+            timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
+            filename_doc = f"{timestamp}.{file_extension_doc}"
+            filename_dak_doc = f"{timestamp}.{file_extension_dak_doc}" if upload_file_dak_doc else None
 
-            # Save the files
+            # Save files
             fs = FileSystemStorage()
-            filename1 = fs.save(filename_doc, upload_file_doc) 
-            filename2 = fs.save(filename_dak_doc, upload_file_dak_doc)
+            filename1 = fs.save(filename_doc, upload_file_doc)
+            if upload_file_dak_doc:
+                filename2 = fs.save(filename_dak_doc, upload_file_dak_doc)
+            else:
+                filename2 = None
 
             # Get form data
             noting_title = request.POST.get('noting_title')
-            noting_no = request.POST.get('noting_number') 
+            noting_no = request.POST.get('noting_number')
             noting_comments = request.POST.get('noting_comments')
-            selected_role = request.POST.get('selected_role') 
+            selected_role = request.POST.get('selected_role')
             selected_user = request.POST.get('selected-roles-users')
             digital_signature = request.POST.get('noting_digital_signature')
 
-            # Create a Noting object
+            if not noting_comments:  # Check if the comment is empty or None
+             noting_comments = None 
+
+            # Handle digital signature (optional)
+            signature_data = request.POST.get('signature')
+            signature_filename = None
+            if signature_data:
+                format, imgstr = signature_data.split(';base64,')
+                ext = format.split('/')[-1]
+                signature_filename = f"{timestamp}_signature.{ext}"
+                signature_path = os.path.join(settings.MEDIA_ROOT, 'signatures', signature_filename)
+
+                # Create the directory if it doesn't exist
+                if not os.path.exists(os.path.dirname(signature_path)):
+                    os.makedirs(os.path.dirname(signature_path))
+
+                # Decode and save the signature image
+                with open(signature_path, "wb") as f:
+                    f.write(base64.b64decode(imgstr))
+
+            # Create Noting object
             noting = Noting.objects.create(
-                title=noting_title, 
+                title=noting_title,
                 filename_doc=filename1,
                 filename_dak_doc=filename2,
-                noting_no=noting_no, 
+                noting_no=noting_no,
                 user_id=uid,
                 role_id=selected_role,
                 selected_user_id=selected_user,
-                digital_signature=digital_signature
+                comment=noting_comments,
+                digital_signature=digital_signature,
+                signature_image=signature_filename  # Save the filename of the signature
             )
 
-            # Create a NotingUserMap object
+            # Create NotingUserMap object
             NotingUserMap.objects.create(
                 noting=noting,
                 from_user_id=uid,
                 to_user_id=selected_user,
                 is_opened=0,
                 is_forwarded=0,
-                message=noting_comments
+                message=noting_comments,
+                digital_signature=digital_signature,
+                signature_image=signature_filename
             )
 
-            # Redirect to a success page or perform any additional actions
             return redirect('list-notings')
 
         except ValidationError:
-            # Handle validation errors
-            messages.error(request, 'Error occurred while uploading the file.') 
-            return redirect('create-noting') 
+            messages.error(request, 'Error occurred while uploading the file.')
+            return redirect('create-noting')
 
-    roles = Role.objects.filter(role_name__in=['co', 'go', 'do', 'hos'])
-    data = {'section': "create_noting", 'roles': roles,'noting_rand_no':noting_rand_no}
-    return render(request, 'noting.html', data)  
-
-
-
+    roles = Role.objects.filter(role_name__in=['co', 'go', 'do', 'hos', 'gm'])
+    data = {'section': "create_noting", 'roles': roles, 'noting_rand_no': noting_rand_no}
+    return render(request, 'noting.html', data) 
 
 
 
@@ -427,13 +546,15 @@ def search_noting(request):
                 .filter(noting__noting_no=search_by_noting_no) \
                 .select_related('noting', 'from_user', 'to_user') \
                 .values(
-                    'id', 'is_opened', 'message', 'is_forwarded', 'status',
+                    'id', 'is_opened', 'message', 'is_forwarded', 'status', 'created', 'updated',
                     'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
-                    'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title', 
+                    'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title',
                     'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
                     from_user_name=F('from_user__username'),
-                    to_user_name=F('to_user__username')
-                )
+                    from_user_role_name=F('from_user__user_role_maps__role__role_name'),  # Get the role name of from_user
+                    to_user_name=F('to_user__username'),
+                    to_user_role_name=F('to_user__user_role_maps__role__role_name')  # Get the role name of to_user
+                ).order_by('-id')  
         else:
             notings = NotingUserMap.objects.none()  # Return empty queryset for NotingUserMap
     else:
@@ -441,6 +562,8 @@ def search_noting(request):
     receive_forwarded_count = get_receive_forwarded_count(uid)
     data = {'section': "search_noting", 'notings': notings,'receive_forwarded_count': receive_forwarded_count, }
     return render(request, 'noting.html', data)
+
+
 
 
 
@@ -504,15 +627,17 @@ def incoming_noting(request):
     
     notings = NotingUserMap.objects \
         .filter(to_user_id =uid) \
-        .select_related('noting', 'from_user', 'to_user') \
+        .select_related('noting', 'from_user__user_role_maps__role', 'to_user__user_role_maps__role') \
         .values(
-            'id', 'is_opened', 'message', 'is_forwarded', 'status',
+            'id', 'is_opened', 'message', 'is_forwarded', 'status', 'created', 'updated',
             'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
-            'noting__comment', 'noting__digital_signature', 'noting__status','noting__title', 
+            'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title',
             'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
             from_user_name=F('from_user__username'),
-            to_user_name=F('to_user__username') 
-        )
+            from_user_role_name=F('from_user__user_role_maps__role__role_name'),  # Get the role name of from_user
+            to_user_name=F('to_user__username'),
+            to_user_role_name=F('to_user__user_role_maps__role__role_name')  # Get the role name of to_user
+        ).order_by('-id') 
     receive_forwarded_count = get_receive_forwarded_count(uid)
     data = {'section': "incoming_noting",'notings' : notings,'receive_forwarded_count': receive_forwarded_count,} 
     return render(request,'noting.html',data)
@@ -530,48 +655,66 @@ def forwarded_noting(request):
         return render(request, 'noting.html', {'section': "incoming_noting", 'notings': []})
     
     notings = NotingUserMap.objects \
-        .filter(from_user_id =uid) \
-        .select_related('noting', 'from_user', 'to_user') \
-        .values(
-            'id', 'is_opened', 'message', 'is_forwarded', 'status',
-            'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
-            'noting__comment', 'noting__digital_signature', 'noting__status','noting__title', 
-            'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
-            from_user_name=F('from_user__username'),
-            to_user_name=F('to_user__username')
-        )
+    .filter(from_user_id=uid) \
+    .select_related('noting', 'from_user__user_role_maps__role', 'to_user__user_role_maps__role') \
+    .values(
+        'id', 'is_opened', 'message', 'is_forwarded', 'status', 'created', 'updated',
+        'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
+        'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title',
+        'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
+        from_user_name=F('from_user__username'),
+        from_user_role_name=F('from_user__user_role_maps__role__role_name'),  # Get the role name of from_user
+        to_user_name=F('to_user__username'),
+        to_user_role_name=F('to_user__user_role_maps__role__role_name')  # Get the role name of to_user
+    ).order_by('-id')  
+
     receive_forwarded_count = get_receive_forwarded_count(uid)
     data = {'section': "forwarded_noting",'notings' : notings,'receive_forwarded_count': receive_forwarded_count,}  
     return render(request,'noting.html',data)
 
 
+ 
+
+
 @check_session_exists
-def list_notings(request):
+def list_notings(request): 
     uid = request.session.get('user_id') 
     notings = Noting.objects.filter(user_id=uid).order_by('-pk')
 
     for noting in notings:
-        # Initialize the array for users
-        users_array = []
+        # Initialize the arrays for users
+        array_from_user_name = []
+        array_from_user_role_name = []
+        array_to_user_name = []
+        array_to_user_role_name = []
 
+        # Query for NotingUserMap related to the current noting
         notings_map = NotingUserMap.objects \
             .filter(noting_id=noting.id) \
             .select_related('noting', 'from_user', 'to_user') \
             .values(
-                'id', 'is_opened', 'message', 'is_forwarded', 'status',
+                'id', 'is_opened', 'message', 'is_forwarded', 'status', 'created', 'updated',
                 'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
                 'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title',
                 'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
                 from_user_name=F('from_user__username'),
-                to_user_name=F('to_user__username')
-            )
+                from_user_role_name=F('from_user__user_role_maps__role__role_name'),  # Get the role name of from_user
+                to_user_name=F('to_user__username'),
+                to_user_role_name=F('to_user__user_role_maps__role__role_name')  # Get the role name of to_user
+            ).order_by('-id') 
 
-        # Collect the usernames
+        # Collect the usernames and roles
         for map_item in notings_map:
-            users_array.append(map_item['from_user_name']) 
+            array_from_user_name.append(map_item['from_user_name'])
+            array_from_user_role_name.append(map_item['from_user_role_name'])
+            array_to_user_name.append(map_item['to_user_name'])
+            array_to_user_role_name.append(map_item['to_user_role_name']) 
 
-        # Attach the users array to each noting object (as an attribute, not in the database)
-        noting.users = users_array
+        # Attach the arrays to each noting object (as attributes, not in the database)
+        noting.array_from_user_name2 = array_from_user_name
+        noting.array_from_user_role_name2 = array_from_user_role_name
+        noting.array_to_user_name2 = array_to_user_name
+        noting.array_to_user_role_name2 = array_to_user_role_name 
 
     receive_forwarded_count = get_receive_forwarded_count(uid)
     data = {
@@ -587,28 +730,70 @@ def list_notings(request):
 
 
 
-@check_session_exists
-def view_noting(request, noting_id):
+@check_session_exists 
+def view_noting(request, noting_id): 
     notings = Noting.objects.filter(id=noting_id)
     uid = request.session.get('user_id')
+    
     # Prepare the data with file extensions
     notings_with_extension = []
     for noting in notings:
-        file_doc_extension = os.path.splitext(noting.filename_doc)[1][1:]  # Extract extension without the dot
-        file_dak_doc_extension = os.path.splitext(noting.filename_dak_doc)[1][1:]  # Extract extension without the dot
+        # Extract extension for filename_doc
+        file_doc_extension = os.path.splitext(noting.filename_doc)[1][1:]
+        
+        # Extract extension for filename_dak_doc if it exists
+        file_dak_doc_extension = os.path.splitext(noting.filename_dak_doc)[1][1:] if noting.filename_dak_doc else None
+
+        # Get the NotingUserMap data
+        notings_map = NotingUserMap.objects \
+            .filter(noting_id=noting_id, from_user_id=noting.user_id) \
+            .select_related('noting', 'from_user', 'to_user') \
+            .values(
+                'id', 'is_opened', 'message', 'is_forwarded', 'status', 'created', 'updated',
+                'digital_signature', 'signature_image',
+                'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
+                'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title',
+                'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
+                from_user_name=F('from_user__username'),
+                from_user_role_name=F('from_user__user_role_maps__role__role_name'),
+                to_user_name=F('to_user__username'),
+                to_user_role_name=F('to_user__user_role_maps__role__role_name')
+            ).order_by('-id')
+
         notings_with_extension.append({
             'noting': noting,
+            'notings_map': list(notings_map),  # Converting to list for easy iteration in template
             'file_doc_extension': file_doc_extension,
             'file_dak_doc_extension': file_dak_doc_extension,
         })
+
+    notings_map2 = NotingUserMap.objects \
+            .filter(noting_id=noting_id) \
+            .select_related('noting', 'from_user', 'to_user') \
+            .values(
+                'id', 'is_opened', 'message', 'is_forwarded', 'status', 'created', 'updated',
+                'digital_signature', 'signature_image',
+                'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
+                'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title',
+                'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
+                from_user_name=F('from_user__username'),
+                from_user_role_name=F('from_user__user_role_maps__role__role_name'),
+                to_user_name=F('to_user__username'),
+                to_user_role_name=F('to_user__user_role_maps__role__role_name')
+            ).order_by('-id')    
+    
     receive_forwarded_count = get_receive_forwarded_count(uid)
     data = {
-        'section': "view_noting",
+        'section': "view_noting", 
+        'notings_map2' : notings_map2,
         'notings_with_extension': notings_with_extension,
-        'receive_forwarded_count': receive_forwarded_count, 
+        'receive_forwarded_count': receive_forwarded_count
     }
     
     return render(request, 'noting.html', data)
+
+
+
 
 
 
@@ -650,13 +835,14 @@ def view_noting_map(request, noting_user_map_id):
         .filter(id=noting_user_map_id) \
         .select_related('noting', 'from_user', 'to_user') \
         .values(
-            'id', 'is_opened', 'message', 'is_forwarded', 'status',
+            'id', 'is_opened', 'message', 'is_forwarded', 'status','created',
             'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
             'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title', 
             'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
             from_user_name=F('from_user__username'),
             to_user_name=F('to_user__username')
         )
+    
     
     # Handling the case where the ID might not exist.
     if not notings.exists():
@@ -665,32 +851,66 @@ def view_noting_map(request, noting_user_map_id):
     # Prepare the data with file extensions
     notings_with_extension = []
     for noting in notings:
-        file_doc_extension = os.path.splitext(noting['noting__filename_doc'])[1][1:]  # Extract extension without the dot
-        file_dak_doc_extension = os.path.splitext(noting['noting__filename_dak_doc'])[1][1:]  # Extract extension without the dot
-        notings_with_extension.append({
+        file_doc_extension = os.path.splitext(noting['noting__filename_doc'])[1][1:]
+        file_dak_doc_extension = os.path.splitext(noting['noting__filename_dak_doc'])[1][1:] if noting['noting__filename_dak_doc'] else None
+
+        notings_with_extension.append({ 
             'noting': noting,
             'file_doc_extension': file_doc_extension,
             'file_dak_doc_extension': file_dak_doc_extension,
         })
-    
-    update_noting_open_value(uid,noting_user_map_id)    
-    roles = Role.objects.filter(role_name__in=['co', 'go', 'do', 'hos','admin'])
+
+    # Query for notings2 with additional fields
+    notings2 = NotingUserMap.objects \
+        .filter(noting_id=noting['noting__id']) \
+        .select_related('noting', 'from_user', 'to_user') \
+        .values(
+                'id', 'is_opened', 'message', 'is_forwarded', 'status', 'created', 'updated','digital_signature','signature_image',
+                'noting__id', 'noting__noting_no', 'noting__filename_doc', 'noting__filename_dak_doc',
+                'noting__comment', 'noting__digital_signature', 'noting__status', 'noting__title',
+                'noting__user_id', 'noting__selected_user_id', 'noting__role_id',
+                from_user_name=F('from_user__username'),
+                from_user_role_name=F('from_user__user_role_maps__role__role_name'),  # Get the role name of from_user
+                to_user_name=F('to_user__username'),
+                to_user_role_name=F('to_user__user_role_maps__role__role_name')  # Get the role name of to_user
+            ).order_by('-id') 
+
+    update_noting_open_value(uid, noting_user_map_id)    
+    roles = Role.objects.filter(role_name__in=['co', 'go', 'do', 'hos','gm']) 
     receive_forwarded_count = get_receive_forwarded_count(uid)  
      
-    data = {'section': "view_noting_map", 'notings_with_extension': notings_with_extension, 'roles': roles,'receive_forwarded_count': receive_forwarded_count,}  
+    data = {'section': "view_noting_map", 'notings_with_extension': notings_with_extension, 'roles': roles, 'receive_forwarded_count': receive_forwarded_count, 'notings2': notings2}  
     return render(request, 'noting.html', data)
 
 
 
-def update_noting_open_value(uid,noting_user_map_id): 
+
+
+
+
+
+def update_noting_open_value(uid,noting_user_map_id):  
     NotingUserMap.objects.filter(id=noting_user_map_id).exclude(from_user_id=uid).update(is_opened=1)
+
+
+
+
 
 def update_noting_forward_value(noting_user_map_id):     
     NotingUserMap.objects.filter(id=noting_user_map_id).update(is_forwarded=1) 
 
 
-def get_receive_forwarded_count(uid): 
-    received_noting_count = NotingUserMap.objects.filter(to_user_id = uid).count()
-    forwarded_noting_count = NotingUserMap.objects.filter(from_user_id = uid).count() 
-    corr_count = {'received_noting_count' : received_noting_count,'forwarded_noting_count':forwarded_noting_count} 
-    return corr_count    
+
+
+def get_receive_forwarded_count(uid):   
+    received_noting_count  = NotingUserMap.objects.filter(to_user_id = uid).count()
+    forwarded_noting_count = NotingUserMap.objects.filter(from_user_id = uid).count()
+    created_noting_count   = Noting.objects.filter(user_id = uid).count()  
+    corr_count = {
+                   'received_noting_count' : received_noting_count,
+                   'forwarded_noting_count':forwarded_noting_count,
+                   'created_noting_count' : created_noting_count
+                } 
+    return corr_count 
+
+

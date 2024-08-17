@@ -24,7 +24,8 @@
                         <div class="container-fluid">
                           <div class="row">
                                  {% include 'common/section.html' %} 
-                                
+                                 <h4 class="text-success">Total Noting : {{noting_counts.total}}, </h4>
+                                 <h4 class="text-success">Forwarded Noting : {{noting_counts.forwarded}}, </h4>
                                 <div class="col-12 text-center"> 
                                   <h1 class="display-6">SEARCH NOTING</h1>
                                   {% if messages %}
@@ -58,6 +59,8 @@
                                                   <th>S.no</th>
                                                   <th>Noting No</th>
                                                   <th>Title</th>
+                                                  <th>Incoming From User ➡️ Forwarded To User</th>
+                                                  <th>Noting Forwarded</th>
                                                   <th>Noting Document</th>
                                                   <th>DAK Document</th>
                                                   <th>Comments</th>
@@ -70,12 +73,20 @@
                                               <tbody>
                                                   {% for noting in notings %} 
                                                       <tr>
-                                                          <th>{{ noting.id }}</th>
+                                                          <th>{{ forloop.counter }}</th>
                                                           <th>{{ noting.noting__noting_no }}</th>
                                                           <td>{{ noting.noting__title }}</td>
+                                                          <th>👤{{ noting.from_user_name|upper }}({{ noting.from_user_role_name }}) ➡️ 🧑‍💻{{ noting.to_user_name|upper }}({{ noting.to_user_role_name }})</th>
+                                                          <th>{{ noting.created }}</th>
                                                           <td>{{ noting.noting__filename_doc }}</td>
                                                           <td>{{ noting.noting__filename_dak_doc }}</td> 
-                                                          <td>{{ noting.noting__comment }}</td> 
+                                                          <td>
+                                                            {% if noting.noting__comment %}   
+                                                              <a href="javascript:void(0)" class="btn btn-sm btn-outline-dark noting_msg" style="width: 150px;font-size: 12px;" data-msg="{{ noting.noting__comment }}">📩 {{ noting.noting__comment|slice:":11" }}..</a>
+                                                            {% else %} 
+                                                                None
+                                                            {% endif %} 
+                                                          </td> 
                                                           <td>
                                                               {% if noting.is_opened == 1 %}
                                                                 <b class="text-success">Opened ✔️</b>
@@ -96,7 +107,7 @@
                                                             </td> 
                                                             <td>
                                                     
-                                                                <a href="{% url 'admin-search-noting-view' noting.noting__id %}" class="btn btn-sm btn-outline-dark">View</a> 
+                                                                <a href="{% url 'admin-search-noting-view' noting.noting__id %}" class="btn btn-sm btn-outline-dark">🔎 View</a> 
                                                             </td>  
                                                             <td>
                                                                 {% if noting.status == 0 %}
@@ -120,120 +131,200 @@
 
         {% if section == 'search_noting_view' %}
 
-                    <div class="container">
-                    <div class="row">
-                           {% include 'common/section.html' %}
-                           
-                          <div class="col-12 text-center">
+        <div class="container" id="printableArea">
+          <div class="row">
+                  {% include 'common/section.html' %}
+                  
 
-                            <!-- Display Noting Number -->
-                            {% if noting_with_extension %}
-                            <h1 class="display-6">
-                                <b>SEARCH VIEW NOTING | {{ noting_with_extension.noting.noting_no }}</b>
-                                <a href="javascript:void(0);" class="btn btn-sm btn-outline-dark" onclick="window.print(); return false;">
-                                    Print
-                                </a>
-                            </h1>
-                            {% else %}
-                            <h1 class="display-6"><b>No Noting Found</b></h1>
-                            {% endif %} 
+                  <hr>
+                  <div class="col-12 text-center" > 
+                      {% for item in notings_with_extension %} 
+                          <h1 class="display-6"><b>VIEW NOTING | {{ item.noting.noting_no }}</b></h1>
+                      {% endfor %}
+                  {% if messages %}
+                      {% for message in messages %}
+                          {% if message.tags == 'error' %}
+                              <div class="alert alert-danger">{{ message }}</div>
+                          {% elif message.tags == 'success' %}
+                              <div class="alert alert-success">{{ message }}</div>
+                          {% endif %}
+                      {% endfor %} 
+                  {% endif %}   
+                  <div class="border bg-light rounded-4">
+                      <div class="justify-content-center" style="margin:20px">
+                          <div class="row">
 
-                            {% if messages %} 
-                              {% for message in messages %}
-                                  {% if message.tags == 'error' %}
-                                      <div class="alert alert-danger">{{ message }}</div>
-                                  {% elif message.tags == 'success' %}
-                                      <div class="alert alert-success">{{ message }}</div>
-                                  {% endif %}
-                              {% endfor %} 
-                            {% endif %}   
-                            <div class="border bg-light rounded-4">
-                              <div class="justify-content-center" style="margin:20px">
-                                  <div class="row"> 
-                                        
 
-                                      <!-- Second Table: File Previews -->
-                                        <table class="table table-sm table-light" style="font-size: 13px;">
-                                            <thead class="table-primary">
-                                                <tr>
-                                                    <th>Noting Document</th>
-                                                    <th>Dak Document</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% if noting_with_extension %}
-                                                <tr>
-                                                    <td id="documentContainer1" style="border: 2px dashed #aaa;">
-                                                        <div class="row">
-                                                            <center>
-                                                                <div class="col-5">
-                                                                    <a href="{{ MEDIA_URL }}{{ noting_with_extension.noting.filename_doc }}" class="btn btn-sm btn-outline-dark" download>
-                                                                        Download - {{ noting_with_extension.noting.filename_doc }} 
-                                                                    </a>
-                                                                    
-                                                                </div> 
-                                                            </center>
-                                                        </div><br>
-                                                    </td>
-                                                    <td id="documentContainer2" style="border: 2px dashed #aaa;">
-                                                        <div class="row">
-                                                            <center>
-                                                                <div class="col-5">
-                                                                    <a href="{{ MEDIA_URL }}{{ noting_with_extension.noting.filename_dak_doc }}" class="btn btn-sm btn-outline-dark" download>
-                                                                        Download - {{ noting_with_extension.noting.filename_dak_doc }} 
-                                                                    </a>
-                                                                   
-                                                                </div>
-                                                            </center>
-                                                        </div><br>
-                                                    </td>
-                                                </tr>
-                                                <script>
-                                                    document.addEventListener('DOMContentLoaded', function() {
-                                                        renderDocument('documentContainer1', '{{ MEDIA_URL }}{{ noting_with_extension.noting.filename_doc }}', '{{ noting_with_extension.file_doc_extension }}'); 
-                                                        renderDocument('documentContainer2', '{{ MEDIA_URL }}{{ noting_with_extension.noting.filename_dak_doc }}', '{{ noting_with_extension.file_dak_doc_extension }}');
-                                                    });
-                                                </script>
-                                                {% else %}
-                                                <tr>
-                                                    <td colspan="2">No files found.</td>
-                                                </tr>
-                                               
-                                                {% endif %}
-                                            </tbody>
-                                        </table>
-                                         
-                                        <!-- Third Table: User Role, Comments, Digital Signature -->
-                                        <table class="table table-sm table-light" style="font-size: 13px;">
-                                            <thead class="table-primary">
-                                                <tr>
-                                                    <th>USER ROLE or USER TYPE</th>
-                                                    <th>COMMENTS</th>
-                                                    <th>DIGITAL SIGNATURE</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for item3 in notings_map %}
-                                                <tr>
-                                                    <td>{{ item3.to_user_name }}</td>
-                                                    <td>{{ item3.message }}</td>
-                                                    <td>{{ item3.digital_signature }}</td> 
-                                                </tr>
-                                                {% empty %}
-                                                <tr>
-                                                    <td colspan="3">No files found.</td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
 
-                                  </div>  
-                              </div>
-                            </div>
-                            
+                          
+                          <!-- First Table: Noting Details -->
+                          <table class="table table-sm table-light" style="font-size: 13px;">
+                              <thead class="table-primary">
+                                  <tr>
+                                      <th>Noting No</th>
+                                      <th>Title</th>
+                                      <th>Forwarded Date</th>
+                                      <th>Noting Document</th>
+                                      <th>DAK Document</th>
+                                      <th>Is Opened</th>
+                                      <th>Is Forwarded</th>
+                                      <th>Status</th>  
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  {% for item in notings_with_extension %} 
+                                      <tr>
+                                          <td>{{ forloop.counter }}</td>
+                                          <td>{{ item.noting.title }}</td>
+                                          <th>{{ item.noting.created }}</th>
+                                          <td>{{ item.noting.filename_doc }} ({{ item.file_doc_extension }})</td>
+                                          <td>{{ item.noting.filename_dak_doc }} ({{ item.file_dak_doc_extension }})</td>
+                                          <td>
+                                              {% for map in item.notings_map %}
+                                                  {% if map.is_opened == 1 %}
+                                                      <b class="text-success">Opened ✔️</b>
+                                                  {% elif map.is_opened == 0 %}
+                                                      <b class="text-dark">Pending ⚠️</b> 
+                                                  {% else %}
+                                                      Unknown
+                                                  {% endif %}
+                                              {% endfor %}
+                                          </td>
+                                          <td>
+                                              {% for map in item.notings_map %}
+                                                  {% if map.is_forwarded == 1 %}
+                                                      <b class="text-success">Yes ✔️</b>
+                                                  {% elif map.is_forwarded == 0 %}
+                                                      <b class="text-dark">No</b> 
+                                                  {% else %}
+                                                      Unknown
+                                                  {% endif %}
+                                              {% endfor %}
+                                          </td>
+                                          <td>
+                                              {% if item.noting.status == 0 %}
+                                                  <b class="text-danger">Inactive</b>
+                                              {% elif item.noting.status == 1 %}
+                                                  <b class="text-success">Active</b>
+                                              {% endif %}
+                                          </td>
+                                      </tr>
+                                  {% empty %}
+                                      <tr>
+                                          <td colspan="8">No notings found.</td>
+                                      </tr>
+                                  {% endfor %}
+                              </tbody>
+                          </table>
+                          
+
+                                  <!-- Second Table: File Previews -->
+                                  <table class="table table-sm table-light" style="font-size: 13px;">
+                                      <thead class="table-primary">
+                                          <tr>
+                                              <th>Noting Document</th>
+                                              <th>Dak Document</th>
+                                          </tr>
+                                      </thead>
+                                      <tbody>
+                                          {% for item in notings_with_extension %}
+                                              <tr>
+
+                                                  <td id="documentContainer1" style="border: 2px dashed #aaa;width: 50%;">
+                                                      <div class="row">
+                                                          <center>
+                                                              <div class="col-5">
+                                                                  <a href="{{ MEDIA_URL }}{{ item.noting.filename_doc }}" class="btn btn-sm btn-outline-dark" download>Download</a>
+                                                                  <a href="#" class="btn btn-sm btn-outline-dark" onclick="printDiv('printableArea')">Print</a>
+                                                              
+                                                              </div>
+                                                          </center> 
+                                                          
+                                                          
+                                                      </div><br>
+                                                  </td>
+                                                  
+                                                  
+                                                  <td id="documentContainer2" style="border: 2px dashed #aaa;width: 50%;">
+                                                      <div class="row">
+                                                          <center>
+                                                              <div class="col-5">
+                                                                  <a href="{{ MEDIA_URL }}{{ item.noting.filename_dak_doc }}" class="btn btn-sm btn-outline-dark" download>Download</a> 
+                                                                  <a href="#" class="btn btn-sm btn-outline-dark" onclick="printDiv('printableArea')">Print</a> 
+                                                              </div>                                          
+                                                          </center>
+                                                          
+                                                          
+                                                      </div><br> 
+                                                  </td>
+
+
+                                                  <script>     
+                                                      document.addEventListener('DOMContentLoaded', function() {
+                                                          renderDocument('documentContainer1', '{{ MEDIA_URL }}{{ item.noting.filename_doc }}', '{{ item.file_doc_extension }}');
+                                                          renderDocument('documentContainer2', '{{ MEDIA_URL }}{{ item.noting.filename_dak_doc }}', '{{ item.file_dak_doc_extension }}');
+                                                      });
+                                                  </script>
+                                                  
+                                              </tr>
+                                          {% empty %}
+                                              <tr>
+                                                  <td id="documentContainer2" style="border: 2px dashed #aaa; width: 50%; height: 100%; display: flex; justify-content: center; align-items: center;">
+                                                      <div>
+                                                          <h1 style="text-align: center;">No File</h1>
+                                                      </div>
+                                                  </td>
+                                              </tr> 
+                                              
+                                          {% endfor %}
+                                      </tbody>
+                                  </table>
+
+
+                                  <h3>People Involved</h3> 
+
+                                  <!-- Third Table: User Role, Comments, Digital Signature -->
+                                  <table class="table table-sm table-light" style="font-size: 13px;">
+                                      <thead class="table-primary">
+                                          <tr>
+                                              <th>FROM USERNAME(ROLE)</th>
+                                              <th>TO USERNAME(ROLE)</th>
+                                              <th>FORWARDED DATE</th>
+                                              <th>COMMENTS</th>
+                                              <th>DIGITAL SIGNATURE</th> 
+                                          </tr>
+                                      </thead>
+                                      <tbody>
+                                          {% for noting3 in notings_map2 %}
+                                              <tr>
+                                                  <td>{{ noting3.from_user_name|upper }} ({{ noting3.from_user_role_name }})</td>
+                                                  <td>{{ noting3.to_user_name|upper }} ({{ noting3.to_user_role_name }})</td>
+                                                  <td>{{ noting3.created }}</td> 
+                                                  <td>{{ noting3.message }}</td>
+                                                  <td>
+                                                      {{ noting3.digital_signature }}
+                                                      {% if noting3.signature_image %}
+                                                          <a href="javascript:void(0)" data-sig="{{ MEDIA_URL }}signatures/{{ noting3.signature_image }}" class="btn btn-sm btn-outline-dark noting_sig">view</a>
+                                                      {% endif %} 
+                                                  </td>
+                                              </tr>
+                                          {% empty %}
+                                              <tr>
+                                                  <td colspan="4">No files found.</td>
+                                              </tr>
+                                          {% endfor %}
+                                      </tbody>
+                                  </table>
+                                  
+
+
+                          </div>  
                       </div>
-                    </div>
-                    </div> 
+                  </div>
+                  
+              </div>
+          </div>
+       </div> 
 
         {% endif %} 
 
@@ -265,44 +356,49 @@
                                     <th>S.no</th>
                                     <th>Noting No</th>
                                     <th>Title</th>
+                                    <th>From Username(ROLE) ➡️ T Username(ROLE)</th>
                                     <th>Noting Document</th>
                                     <th>DAK Document</th>
                                     <th>Comments</th>
-                                    <th>Created</th>
-                                    <th>Updated</th>
-                                    <th>Users</th>
+                                    <th>Forwarded Date</th>
+                                    <th>Digital Sign</th>
                                     <th>Action</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for noting in notings %}
+                                {% for noting in notings_map %}
                                     <tr>
-                                        <th>{{ noting.id }}</th>
-                                        <th>{{ noting.noting_no }}</th>
-                                        <td>{{ noting.title }}</td>
+                                        <th>{{ forloop.counter }}</th>
+                                        <th>{{ noting.noting__noting_no }}</th>
+                                        <td>{{ noting.noting__title }}</td>
                                         <td>
-                                            <a href="{{ MEDIA_URL }}{{ noting.filename_doc }}" class="btn btn-sm btn-outline-dark" download>{{ noting.filename_doc }} - Download</a>
+                                          {{ noting.from_user_name|upper }}({{ noting.from_user_role_name }}) ➡️ {{ noting.to_user_name|upper }}({{ noting.to_user_role_name }})
+                                        </td>
+                                        <td>
+                                            <a href="{{ MEDIA_URL }}{{ noting.noting__filename_doc }}" class="btn btn-sm btn-outline-dark" download>{{ noting.noting__filename_doc }} - ⬇️ Download</a>
                                            
                                         </td>
                                         <td>
-                                            <a href="{{ MEDIA_URL }}{{ noting.filename_dak_doc }}" class="btn btn-sm btn-outline-dark" download>{{ noting.filename_dak_doc }} - Download</a>
+                                            <a href="{{ MEDIA_URL }}{{ noting.noting__filename_dak_doc }}" class="btn btn-sm btn-outline-dark" download>{{ noting.noting__filename_dak_doc }} - ⬇️ Download</a>
                                            
                                         </td>
-                                        <td>{{ noting.comment }}</td>
+                                        <td>
+                                          {% if noting.message %}   
+                                            <a href="javascript:void(0)" class="btn btn-sm btn-outline-dark noting_msg" style="width: 150px;font-size: 12px;" data-comment="{{ noting.message }}">📩 {{ noting.message|slice:":11" }}..</a>
+                                          {% else %} 
+                                              None 
+                                          {% endif %}
+                                        </td>
                                         <td>
                                           {{ noting.created }}
                                         </td>
                                         <td>
-                                          {{ noting.updated }}
+                                          {{ noting.digital_signature }}
                                         </td>
+                                        
                                         <td>
-                                            {% for user in noting.users %}
-                                                {{ user }}{% if not forloop.last %}, {% endif %}
-                                            {% endfor %}
-                                        </td>
-                                        <td>
-                                            <a href="{% url 'admin-search-noting-view' noting.id %}" class="btn btn-sm btn-outline-dark">View</a>
+                                            <a href="{% url 'admin-search-noting-view' noting.noting__id %}" class="btn btn-sm btn-outline-dark">🔎 View</a>
                                         </td>
                                         <td>
                                             {% if noting.status == 0 %}
@@ -313,57 +409,9 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                       <td colspan="11">
-                                                <h3>Noting Forwarded Details: {{ noting.noting_no }}</h3>
-                                                <table class="table table-sm table-light" style="font-size: 13px;">
-                                                    <thead class="table-dark">
-                                                        <tr>
-                                                            <th>S.no</th>
-                                                            <th>Noting No</th>
-                                                            <th>Title</th>
-                                                            <th>Comments</th>
-                                                            <th>Digital Signature</th>
-                                                            <th>Status</th>
-                                                            <th>From User</th>
-                                                            <th>To User</th>
-                                                            <th>Is Opened</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        
-                                                            {% for detail in noting.noting_map_detail %}
-                                                                <tr>
-                                                                    <td>{{ detail.id }}</td>
-                                                                    <td>{{ detail.noting__noting_no }}</td>
-                                                                    <td>{{ detail.noting__title }}</td>
-                                                                    <td>{{ detail.message }}</td>
-                                                                    <td>{{ detail.noting__digital_signature }}</td> 
-                                                                    <td>
-                                                                        {% if detail.status == 0 %}
-                                                                            <b class="text-danger">Inactive</b>
-                                                                        {% elif detail.status == 1 %}
-                                                                            <b class="text-success">Active</b>
-                                                                        {% endif %}
-                                                                    </td>
-                                                                    <td>{{ detail.from_user_name }}</td>
-                                                                    <td>{{ detail.to_user_name }}</td>
-                                                                    <td>
-                                                                        {% if detail.is_opened == 1 %}
-                                                                            <b class="text-success">Opened ✔️</b>
-                                                                        {% elif detail.is_opened == 0 %}
-                                                                            <b class="text-dark">Pending ⚠️</b>
-                                                                        {% else %}
-                                                                            Unknown
-                                                                        {% endif %}
-                                                                    </td>
-                                                                </tr>
-                                                            {% endfor %}
-                                                       
-                                                    </tbody>
-                                                </table>
-                                       </td>
+                                      
                                     </tr>
-                                {% empty %}
+                                {% empty %} 
                                     <tr>
                                         <td colspan="11">No notings found.</td>
                                     </tr>
@@ -476,11 +524,38 @@
         </div>
       </div>
     </div>
-    <script src="{% static 'bootstrap5/bootstrap.bundle.min.js' %}"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+    <div class="modal fade" id="openModalMsg"> 
+      <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+          <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalToggleLabel">📩 Message</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body showMsg text-center"></div>
+      </div>
+      </div>
+  </div> 
+
+  <div class="modal fade" id="openModalSig">
+      <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+          <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalToggleLabel">📩 Signature</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body showSig text-center"></div>
+      </div>
+      </div>
+  </div> 
+
+
+    <script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'bootstrap5/bootstrap.bundle.min.js' %}"></script> 
      <script src="{% static 'js/script.js' %}"></script> 
      <script src="{% static 'js/pdf.min.js' %}"></script>  
-     <script src="{% static 'js/pdf.worker.min.js' %}"></script>  
+     <script src="{% static 'js/pdf.worker.min.js' %}"></script> 
+     <script src="{% static 'js/signature_pad.umd.min.js' %}"></script>  
      <script>
       function renderDocument(containerId, fileUrl, fileExtension) {
           const container = document.getElementById(containerId);
@@ -500,7 +575,7 @@
                   return page.render(renderContext).promise;
               }).catch(error => {
                   console.error('Error loading PDF:', error);
-                  container.innerHTML = '<p>Error loading PDF.</p>';
+                  container.innerHTML = '<p>Error loading PDF.</p>'; 
               });
 
           } else if (['jpg', 'png'].includes(fileExtension)) {
@@ -521,6 +596,32 @@
               container.innerHTML = '<p>Unsupported file format.</p>';
           }
       }
-  </script>   
+  </script> 
+   <script>
+    $(document).ready(function(){
+        $('.noting_msg').click(function(){
+            var msg = $(this).data('comment');  
+            $('#openModalMsg').modal('show');
+            $('.showMsg').html(msg).show();
+        });
+        $('.noting_sig').click(function(){
+            var msg = $(this).data('sig');  
+            $('#openModalSig').modal('show');
+            $('.showSig').html('<img src="'+msg+'" />').show(); 
+        });
+    });
+    function printDiv(divId) {
+    var printContents = document.getElementById(divId).innerHTML;
+    var originalContents = document.body.innerHTML;
+
+    document.body.innerHTML = printContents;
+
+    window.print();
+
+    document.body.innerHTML = originalContents;
+    location.reload(); // Reload to restore original content and event listeners
+}
+
+</script>   
   </body>
 </html>

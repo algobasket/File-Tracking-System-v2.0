@@ -35,7 +35,12 @@
       </div>
     </div>
 </nav>
-{% endif %}
+{% endif %} 
+
+
+
+
+
 {% if request.session.role == 'gms'%}
 <nav class="navbar navbar-expand-lg navbar-light">
     <div class="container">
@@ -65,6 +70,11 @@
     </div>
 </nav>
 {% endif %}
+
+
+
+
+
 
 {% if request.session.role == 'gm' %}
 <nav class="navbar navbar-expand-lg navbar-light">
@@ -96,6 +106,10 @@
 </nav>
 {% endif %}
 
+
+
+
+
 {% if request.session.role == 'dakghar' %}
 <nav class="navbar navbar-expand-lg navbar-light">
     <div class="container">
@@ -122,6 +136,8 @@
     </div>
 </nav>
 {% endif %}
+
+
 
 {% if request.session.role == 'hos' or request.session.role == 'go' or request.session.role == 'co' or request.session.role == 'do' %}
     <nav class="navbar navbar-expand-lg navbar-light">
